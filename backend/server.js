@@ -16,7 +16,7 @@ const syncEventAggregator = require('./services/eventAggregator');
 
 const errorMiddleware = require('./middleware/errorMiddleware');
 
-dotenv.config();
+dotenv.config({ path: path.resolve(__dirname, '.env') });
 
 const app = express();
 const server = http.createServer(app);
