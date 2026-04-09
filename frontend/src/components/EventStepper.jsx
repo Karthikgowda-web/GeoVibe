@@ -66,8 +66,10 @@ const EventStepper = ({ initialData = null, onClose, onSuccess }) => {
         res = await axios.post(`${API_URL}/api/events/`, data, { headers });
       }
       
-      if (res.status === 200) {
-        onSuccess(res.data);
+      if (res.status === 200 || res.status === 201) {
+        // Pass res.data.data (the actual event object) to ensure the 
+        // Host Portal list can update its state correctly.
+        onSuccess(res.data.data);
       }
     } catch (err) {
       alert(err.response?.data?.message || "Failed to save event");

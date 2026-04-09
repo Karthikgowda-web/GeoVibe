@@ -20,7 +20,10 @@ const HostDashboard = () => {
         headers: { 'Authorization': `Bearer ${token}` }
       })
       .then(res => {
-        setEvents(res.data);
+        // Correctly access the 'data' array from the structured API response 
+        // to prevent .map() crashes.
+        const eventData = res.data.data || res.data;
+        setEvents(Array.isArray(eventData) ? eventData : []);
         setLoading(false);
       })
       .catch(err => {
