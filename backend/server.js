@@ -21,11 +21,6 @@ dotenv.config({ path: path.resolve(__dirname, '.env') });
 const app = express();
 const server = http.createServer(app);
 
-const io = new Server(server, { 
-  cors: { origin: process.env.FRONTEND_URL || '*' } 
-});
-app.set('io', io);
-
 const allowedOrigins = [
   'http://localhost:5173',
   'https://geo-vibe-nine.vercel.app',
@@ -34,7 +29,7 @@ const allowedOrigins = [
 
 const corsOptions = {
   origin: function (origin, callback) {
-    if (!origin || allowedOrigins.indexOf(origin) !== -1 || origin.endsWith('.vercel.app')) {
+    if (!origin || allowedOrigins.some(o => origin.startsWith(o)) || origin.endsWith('.vercel.app')) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
@@ -43,6 +38,11 @@ const corsOptions = {
   credentials: true,
   optionsSuccessStatus: 200
 };
+
+const io = new Server(server, { 
+  cors: corsOptions
+});
+app.set('io', io);
 
 app.use(cors(corsOptions));
 app.use(express.json());
