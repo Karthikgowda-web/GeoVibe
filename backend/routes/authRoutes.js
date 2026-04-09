@@ -6,19 +6,8 @@ const path = require('path');
 const fs = require('fs');
 const authController = require('../controllers/authController');
 
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    const dir = './uploads/profiles';
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-    cb(null, dir);
-  },
-  filename: function (req, file, cb) {
-    cb(null, `profile-${req.user.id}-${Date.now()}${path.extname(file.originalname)}`);
-  }
-});
-const upload = multer({ storage: storage });
+const { profileStorage } = require('../config/cloudinary');
+const upload = multer({ storage: profileStorage });
 
 router.post('/register', authController.register);
 router.post('/login', authController.login);

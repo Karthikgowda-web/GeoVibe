@@ -5,15 +5,8 @@ const multer = require('multer');
 const path = require('path');
 const eventController = require('../controllers/eventController');
 
-const storage = multer.diskStorage({
-  destination: function(req, file, cb) {
-    cb(null, 'uploads/');
-  },
-  filename: function(req, file, cb) {
-    cb(null, Date.now() + path.extname(file.originalname));
-  }
-});
-const upload = multer({ storage });
+const { eventStorage } = require('../config/cloudinary');
+const upload = multer({ storage: eventStorage });
 
 router.get('/', eventController.getAllEvents);
 router.get('/all', eventController.getVerifiedEvents);

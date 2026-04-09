@@ -82,6 +82,6 @@ exports.uploadPhoto = (req, res) => {
   if (!req.file) {
     return res.status(400).json({ status: 'fail', message: 'No file uploaded' });
   }
-  const fileUrl = `/uploads/profiles/${req.file.filename}`;
+  const fileUrl = req.file.path;
   res.json({ status: 'success', url: fileUrl });
 };

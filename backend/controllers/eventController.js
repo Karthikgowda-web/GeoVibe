@@ -20,8 +20,8 @@ exports.createEvent = catchAsync(async (req, res) => {
   
   let imageUrl = null;
   if (req.file) {
-    const backendUrl = process.env.BACKEND_URL || 'http://localhost:5000';
-    imageUrl = `${backendUrl}/uploads/${req.file.filename}`;
+    // Cloudinary storage engine provides the absolute secure URL in req.file.path
+    imageUrl = req.file.path;
   }
 
   const newEvent = new Event({
@@ -71,8 +71,8 @@ exports.updateEvent = catchAsync(async (req, res) => {
   
   let imageUrl = event.imageUrl;
   if (req.file) {
-    const backendUrl = process.env.BACKEND_URL || 'http://localhost:5000';
-    imageUrl = `${backendUrl}/uploads/${req.file.filename}`;
+    // Cloudinary storage engine provides the absolute secure URL in req.file.path
+    imageUrl = req.file.path;
   }
 
   event.title = title || event.title;
