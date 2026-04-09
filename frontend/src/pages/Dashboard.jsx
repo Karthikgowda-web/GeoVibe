@@ -19,10 +19,34 @@ const CATEGORIES = [
 
 const mockTags = ['Engineering', 'Open to All', 'Networking', 'Innovation'];
 
-const EventCard = ({ event, index, location, handleRegisterClick }) => {
-    if (!event) return null;
+// ─────────────────────────────────────────────────────────────────────────────
+// DATA INTEGRITY HELPER
+// ─────────────────────────────────────────────────────────────────────────────
+// This function generates a smart fallback registration link.
+// Data Integrity Principle: Every event shown to a user MUST have a valid,
+// actionable "Register Now" link. If the database entry is missing a direct URL,
+// we degrade gracefully by generating a pre-filled Unstop search URL using the
+// event's title. This ensures the button is NEVER broken for the end-user.
+const getRegistrationUrl = (event) => {
+  // Priority 1: Use the validated direct URL from the database.
+  if (event.registrationUrl && event.registrationUrl.startsWith('http')) {
+    return event.registrationUrl;
+  }
+  // Priority 2: Generate a smart search fallback using the event title.
+  // This prevents the 'Link Unavailable' dead-end for every event.
+  if (event.title) {
+    return `https://unstop.com/search?q=${encodeURIComponent(event.title)}`;
+  }
+  // Priority 3: Return null only if no title exists (event will be filtered out).
+  return null;
+};
 
-  let distanceStr = "Unknown";
+const EventCard = ({ event, index, location, handleRegisterClick }) => {
+  // Data Integrity Check: Skip rendering completely malformed event objects.
+  if (!event || !event.title) return null;
+
+  // Compute human-readable distance string from GeoJSON [lng, lat] coordinates.
+  let distanceStr = 'Unknown';
   if (location && event.location?.coordinates && Array.isArray(event.location.coordinates)) {
     const lat = event.location.coordinates[1];
     const lng = event.location.coordinates[0];
@@ -36,37 +60,40 @@ const EventCard = ({ event, index, location, handleRegisterClick }) => {
   const teamSizeMax = event.teamSizeMax || ((index % 4) + 2);
   const isUserUpload = event.source === 'User';
   const organizer = isUserUpload 
-    ? (event.author?.username || event.organizerName || "Verified User")
-    : (event.organizerName || "GeoVibe Verified Network");
+    ? (event.author?.username || event.organizerName || 'Verified User')
+    : (event.organizerName || 'GeoVibe Verified Network');
   
   let daysLeft = (index % 10) + 1; 
   if (event.deadline) {
-     const diff = new Date(event.deadline) - new Date();
-     daysLeft = diff > 0 ? Math.ceil(diff / (1000 * 60 * 60 * 24)) : 0;
+    const diff = new Date(event.deadline) - new Date();
+    daysLeft = diff > 0 ? Math.ceil(diff / (1000 * 60 * 60 * 24)) : 0;
   }
 
-    const fallbackImage = `https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&q=80&w=800`;
-    const mainImage = event.imageUrl || fallbackImage;
+  const fallbackImage = `https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&q=80&w=800`;
+  const mainImage = event.imageUrl || fallbackImage;
+
+  // Resolve the smartest available registration URL for this event.
+  const resolvedUrl = getRegistrationUrl(event);
 
   return (
     <div className="bg-white rounded-xl p-5 border border-gray-200 shadow-sm hover:shadow-lg hover:-translate-y-1 transition duration-300 flex flex-col sm:flex-row gap-5">
       <div className="h-40 w-full sm:w-48 shrink-0 rounded-lg overflow-hidden border border-gray-100 relative bg-gray-100">
-         <img 
-           src={mainImage} 
-           alt={event.title || "Event Details"} 
-           className="w-full h-full object-cover" 
-           onError={(e) => { e.target.src = fallbackImage; }}
-         />
-         <div className="absolute top-2 right-2 bg-white/90 backdrop-blur text-gray-800 text-xs font-bold px-2 py-0.5 rounded flex items-center shadow-sm">
-           <MapPin size={12} className="mr-1 text-brand-primary" /> Live
-         </div>
+        <img 
+          src={mainImage} 
+          alt={event.title || 'Event Details'} 
+          className="w-full h-full object-cover" 
+          onError={(e) => { e.target.src = fallbackImage; }}
+        />
+        <div className="absolute top-2 right-2 bg-white/90 backdrop-blur text-gray-800 text-xs font-bold px-2 py-0.5 rounded flex items-center shadow-sm">
+          <MapPin size={12} className="mr-1 text-brand-primary" /> Live
+        </div>
       </div>
       
       <div className="flex-1 flex flex-col justify-between">
         <div>
           <div className="flex items-center">
             <h3 className="text-xl font-extrabold text-gray-900 pr-2 line-clamp-1">
-              {event.title || "Untitled Opportunity"}
+              {event.title || 'Untitled Opportunity'}
             </h3>
             {event.isVerified && <CheckCircle size={18} className="text-blue-500 fill-blue-50" />}
           </div>
@@ -110,18 +137,18 @@ const EventCard = ({ event, index, location, handleRegisterClick }) => {
         )}
         
         <div className="flex flex-wrap items-center gap-3 mt-3 text-sm text-gray-600 font-medium">
-           <div className="flex items-center bg-gray-50 px-2.5 py-1.5 rounded-md border border-gray-100">
-             <Users size={16} className="text-blue-500 mr-2" />
-             <span>Team: {teamSizeMin} - {teamSizeMax}</span>
-           </div>
-            <div className="flex items-center bg-gray-50 px-2.5 py-1.5 rounded-md border border-gray-100">
-              <MapPin size={16} className="text-brand-accent mr-2" />
-              <span className="truncate max-w-[120px]">{event.venueName || distanceStr}</span>
-            </div>
-           <div className="flex items-center bg-gray-50 px-2.5 py-1.5 rounded-md border border-gray-100">
-             <Clock size={16} className="text-orange-500 mr-2" />
-             <span className={daysLeft === 0 ? "text-red-500 font-bold" : ""}>{daysLeft === 0 ? "Expired" : `${daysLeft} Days Left`}</span>
-           </div>
+          <div className="flex items-center bg-gray-50 px-2.5 py-1.5 rounded-md border border-gray-100">
+            <Users size={16} className="text-blue-500 mr-2" />
+            <span>Team: {teamSizeMin} - {teamSizeMax}</span>
+          </div>
+          <div className="flex items-center bg-gray-50 px-2.5 py-1.5 rounded-md border border-gray-100">
+            <MapPin size={16} className="text-brand-accent mr-2" />
+            <span className="truncate max-w-[120px]">{event.venueName || distanceStr}</span>
+          </div>
+          <div className="flex items-center bg-gray-50 px-2.5 py-1.5 rounded-md border border-gray-100">
+            <Clock size={16} className="text-orange-500 mr-2" />
+            <span className={daysLeft === 0 ? 'text-red-500 font-bold' : ''}>{daysLeft === 0 ? 'Expired' : `${daysLeft} Days Left`}</span>
+          </div>
         </div>
 
         <div className="flex items-center justify-between mt-4">
@@ -135,15 +162,21 @@ const EventCard = ({ event, index, location, handleRegisterClick }) => {
               </span>
             ))}
           </div>
-          {event.registrationUrl ? (
+          {/* Data Integrity: Always show an actionable button. If direct URL exists,
+              use it. Otherwise, use the generated smart fallback search link. */}
+          {resolvedUrl ? (
             <button 
               onClick={(e) => {
                 e.stopPropagation();
-                handleRegisterClick(event._id, event.registrationUrl);
+                handleRegisterClick(event._id, resolvedUrl);
               }}
-              className="bg-brand-primary text-white font-bold text-sm px-4 py-2 rounded shadow-sm hover:bg-blue-700 transition"
+              className={`font-bold text-sm px-4 py-2 rounded shadow-sm transition ${
+                event.registrationUrl
+                  ? 'bg-brand-primary text-white hover:bg-blue-700'
+                  : 'bg-green-600 text-white hover:bg-green-700'
+              }`}
             >
-              Register Now
+              {event.registrationUrl ? 'Register Now' : '🔍 Find on Unstop'}
             </button>
           ) : (
             <button 
@@ -189,19 +222,30 @@ const Dashboard = () => {
       .catch(err => console.error('Error fetching profile:', err));
     }
   }, [token, API_URL]);
-  const filteredEvents = events.filter(event => {
-    const term = searchTerm.toLowerCase();
-    return event.title.toLowerCase().includes(term) || 
-           event.category.toLowerCase().includes(term) ||
-           (event.venueName && event.venueName.toLowerCase().includes(term));
-  });
+  // ─────────────────────────────────────────────────────────────────────────
+  // DATA INTEGRITY FILTER PIPELINE
+  // ─────────────────────────────────────────────────────────────────────────
+  // Step 1: Remove events with no title or category (malformed DB entries).
+  // Step 2: Apply the user's active search term against title, category, venue.
+  // Step 3: Sort by deadline ascending so the most urgent events appear first.
+  // This pipeline guarantees that only quality, actionable events reach the UI.
+  const filteredEvents = events
+    .filter(event => event && event.title && event.category) // Step 1: Data integrity guard
+    .filter(event => {                                         // Step 2: Search filter
+      const term = searchTerm.toLowerCase();
+      if (!term) return true;
+      return (
+        event.title.toLowerCase().includes(term) || 
+        event.category.toLowerCase().includes(term) ||
+        (event.venueName && event.venueName.toLowerCase().includes(term))
+      );
+    });
 
+  // Step 3: Sort by deadline so soonest-expiring events surface at the top.
   const sortedEvents = [...filteredEvents].sort((a, b) => {
-            const now = new Date();
     const dateA = a.deadline ? new Date(a.deadline) : new Date(8640000000000000);
     const dateB = b.deadline ? new Date(b.deadline) : new Date(8640000000000000);
-    
-        return dateA - dateB;
+    return dateA - dateB;
   });
 
   const resetFilters = () => {
