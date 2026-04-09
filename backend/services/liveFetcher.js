@@ -67,8 +67,10 @@ const syncSerpApiEvents = async () => {
                 events.push({
                     title: `${topics[topicIdx]} #${i + 1}`,
                     date: { when: `Apr ${dateOffset}, 2026` },
-                    link: `https:                    venue: venues[venueIdx],
-                    thumbnail: `https:                    description: `A premier gathering at ${venues[venueIdx].name} focusing on networking and regional growth.`
+                    link: `https://example.com/events/${i}`,
+                    venue: venues[venueIdx],
+                    thumbnail: `https://picsum.photos/seed/${i+100}/800/400`,
+                    description: `A premier gathering at ${venues[venueIdx].name} focusing on networking and regional growth.`
                 });
             }
         }

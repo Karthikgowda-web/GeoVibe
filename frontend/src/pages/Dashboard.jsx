@@ -45,7 +45,8 @@ const EventCard = ({ event, index, location, handleRegisterClick }) => {
      daysLeft = diff > 0 ? Math.ceil(diff / (1000 * 60 * 60 * 24)) : 0;
   }
 
-    const fallbackImage = `https:  const mainImage = event.imageUrl || fallbackImage;
+    const fallbackImage = `https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&q=80&w=800`;
+    const mainImage = event.imageUrl || fallbackImage;
 
   return (
     <div className="bg-white rounded-xl p-5 border border-gray-200 shadow-sm hover:shadow-lg hover:-translate-y-1 transition duration-300 flex flex-col sm:flex-row gap-5">
