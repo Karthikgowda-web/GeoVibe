@@ -260,6 +260,7 @@ const Dashboard = () => {
       setIsGlobalFallback(false);
       
       const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      console.log('[DASHBOARD] Fetching from:', API_URL);
       let url = `${API_URL}/api/events/nearby?lat=${location.lat}&lng=${location.lng}&radius=${searchRadius}`;
       if (activeCategory !== 'All') {
         url += `&category=${encodeURIComponent(activeCategory)}`;
@@ -268,27 +269,63 @@ const Dashboard = () => {
       fetch(url)
         .then(res => res.json())
         .then(data => {
-          if (Array.isArray(data) && data.length > 0) {
-            setEvents(data);
+          console.log('[DASHBOARD] Nearby response:', data);
+          const events = data.data || data;
+          if (Array.isArray(events) && events.length > 0) {
+            console.log('[DASHBOARD] Events received from nearby:', events.length);
+            setEvents(events);
             setEventsLoading(false);
           } else {
-                        console.log("[DASHBOARD] No local events found, fetching global opportunities...");
+            console.log('[DASHBOARD] No local events found, fetching global opportunities...');
             fetch(`${API_URL}/api/events/all`)
               .then(res => res.json())
               .then(globalData => {
-                setEvents(Array.isArray(globalData) ? globalData : []);
+                console.log('[DASHBOARD] Global response:', globalData);
+                const allEvents = globalData.data || globalData;
+                console.log('[DASHBOARD] Events received globally:', Array.isArray(allEvents) ? allEvents.length : 0);
+                setEvents(Array.isArray(allEvents) ? allEvents : []);
                 setIsGlobalFallback(true);
                 setEventsLoading(false);
               })
               .catch(err => {
-                console.error("Error fetching global events:", err);
+                console.error('Error fetching global events:', err);
                 setEvents([]);
                 setEventsLoading(false);
               });
           }
         })
         .catch(err => {
-          console.error("Error fetching nearby events:", err);
+          console.error('Error fetching nearby events:', err);
+          console.log('[DASHBOARD] Falling back to global events...');
+          const API_URL2 = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+          fetch(`${API_URL2}/api/events/all`)
+            .then(res => res.json())
+            .then(globalData => {
+              const allEvents = globalData.data || globalData;
+              setEvents(Array.isArray(allEvents) ? allEvents : []);
+              setIsGlobalFallback(true);
+              setEventsLoading(false);
+            })
+            .catch(() => {
+              setEvents([]);
+              setEventsLoading(false);
+            });
+        });
+    } else {
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      console.log('[DASHBOARD] No location yet, fetching all events from:', API_URL);
+      setEventsLoading(true);
+      fetch(`${API_URL}/api/events/all`)
+        .then(res => res.json())
+        .then(globalData => {
+          const allEvents = globalData.data || globalData;
+          console.log('[DASHBOARD] Events received (no location):', Array.isArray(allEvents) ? allEvents.length : 0);
+          setEvents(Array.isArray(allEvents) ? allEvents : []);
+          setIsGlobalFallback(true);
+          setEventsLoading(false);
+        })
+        .catch(err => {
+          console.error('Error fetching events:', err);
           setEventsLoading(false);
         });
     }

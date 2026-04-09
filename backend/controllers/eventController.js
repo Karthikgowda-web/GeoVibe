@@ -4,6 +4,7 @@ const catchAsync = require('../utils/catchAsync');
 
 exports.getAllEvents = catchAsync(async (req, res) => {
   const events = await Event.find().sort({ createdAt: -1 }).populate('author', 'username');
+  console.log('[API] getAllEvents - Events found in DB:', events.length);
   res.json({ status: 'success', results: events.length, data: events });
 });
 
@@ -130,6 +131,7 @@ exports.getNearbyEvents = catchAsync(async (req, res) => {
   }
 
   const events = await Event.find(query);
+  console.log(`[API] getNearbyEvents - lat:${lat} lng:${lng} radius:${radius}km -> Found: ${events.length} events`);
   res.json({ status: 'success', results: events.length, data: events });
 });
 
