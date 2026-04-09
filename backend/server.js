@@ -68,7 +68,14 @@ const startServer = async () => {
        cron.schedule('0 */12 * * *', () => syncEventAggregator());
     });
   } catch (err) {
-    console.error('[CRITICAL] Database handshake failed:', err.message);
+    console.error('========================================');
+    console.error('[CRITICAL] Database handshake failed!');
+    console.error('Error Name:', err.name);
+    console.error('Error Message:', err.message);
+    if (err.name === 'MongooseServerSelectionError') {
+      console.error('TIP: This usually means your IP is not whitelisted in MongoDB Atlas.');
+    }
+    console.error('========================================');
     process.exit(1);
   }
 };
