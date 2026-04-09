@@ -1,6 +1,8 @@
 {
   "scripts": {
-    "dev": "concurrently \"cd backend && node server.js\" \"cd frontend && npm run dev\""
+    "dev": "concurrently \"cd backend && node server.js\" \"cd frontend && npm run dev\"",
+    "start": "cd backend && node server.js",
+    "server": "cd backend && node server.js"
   },
   "devDependencies": {
     "autoprefixer": "^10.4.27",
