@@ -8,6 +8,7 @@ import { io } from 'socket.io-client';
 import { getDistance } from '../utils/distance';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
+import { useDebounce } from '../hooks/useDebounce';
 
 const CATEGORIES = [
   { name: 'Hackathons', icon: <Code size={18} /> },
@@ -27,17 +28,19 @@ const mockTags = ['Engineering', 'Open to All', 'Networking', 'Innovation'];
 // actionable "Register Now" link. If the database entry is missing a direct URL,
 // we degrade gracefully by generating a pre-filled Unstop search URL using the
 // event's title. This ensures the button is NEVER broken for the end-user.
+const formatExternalUrl = (url) => {
+  if (!url) return null;
+  if (url.startsWith('http')) return url;
+  return `https://unstop.com${url.startsWith('/') ? '' : '/'}${url}`;
+};
+
 const getRegistrationUrl = (event) => {
-  // Priority 1: Use the validated direct URL from the database.
-  if (event.registrationUrl && event.registrationUrl.startsWith('http')) {
-    return event.registrationUrl;
+  if (event.registrationUrl) {
+    return formatExternalUrl(event.registrationUrl);
   }
-  // Priority 2: Generate a smart search fallback using the event title.
-  // This prevents the 'Link Unavailable' dead-end for every event.
   if (event.title) {
     return `https://unstop.com/search?q=${encodeURIComponent(event.title)}`;
   }
-  // Priority 3: Return null only if no title exists (event will be filtered out).
   return null;
 };
 
@@ -70,10 +73,18 @@ const EventCard = ({ event, index, location, handleRegisterClick }) => {
   }
 
   const fallbackImage = `https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&q=80&w=800`;
-  const mainImage = event.imageUrl || fallbackImage;
+  
+  // GridFS Support: Build streaming URL if imageName exists, otherwise fallback to imageUrl or default placeholder.
+  // The API_URL is dynamically resolved from environment variables.
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+  const mainImage = event.imageName 
+    ? `${API_URL}/api/events/image/${event.imageName}` 
+    : (event.imageUrl || fallbackImage);
 
   // Resolve the smartest available registration URL for this event.
   const resolvedUrl = getRegistrationUrl(event);
+
+  const isToday = event.deadline && new Date(event.deadline).toDateString() === new Date().toDateString();
 
   return (
     <div className="bg-white rounded-xl p-5 border border-gray-200 shadow-sm hover:shadow-lg hover:-translate-y-1 transition duration-300 flex flex-col sm:flex-row gap-5">
@@ -84,9 +95,15 @@ const EventCard = ({ event, index, location, handleRegisterClick }) => {
           className="w-full h-full object-cover" 
           onError={(e) => { e.target.src = fallbackImage; }}
         />
-        <div className="absolute top-2 right-2 bg-white/90 backdrop-blur text-gray-800 text-xs font-bold px-2 py-0.5 rounded flex items-center shadow-sm">
-          <MapPin size={12} className="mr-1 text-brand-primary" /> Live
-        </div>
+        {isToday ? (
+          <div className="absolute top-2 right-2 bg-green-500/90 backdrop-blur text-white text-[10px] font-bold px-2 py-1 rounded flex items-center shadow-sm">
+             Completed
+          </div>
+        ) : (
+          <div className="absolute top-2 right-2 bg-white/90 backdrop-blur text-gray-800 text-xs font-bold px-2 py-0.5 rounded flex items-center shadow-sm">
+            <MapPin size={12} className="mr-1 text-brand-primary" /> Live
+          </div>
+        )}
       </div>
       
       <div className="flex-1 flex flex-col justify-between">
@@ -147,7 +164,9 @@ const EventCard = ({ event, index, location, handleRegisterClick }) => {
           </div>
           <div className="flex items-center bg-gray-50 px-2.5 py-1.5 rounded-md border border-gray-100">
             <Clock size={16} className="text-orange-500 mr-2" />
-            <span className={daysLeft === 0 ? 'text-red-500 font-bold' : ''}>{daysLeft === 0 ? 'Expired' : `${daysLeft} Days Left`}</span>
+            <span className={isToday ? 'text-green-600 font-bold' : (daysLeft === 0 ? 'text-red-500 font-bold' : '')}>
+              {isToday ? 'Completed' : (daysLeft === 0 ? 'Expired' : `${daysLeft} Days Left`)}
+            </span>
           </div>
         </div>
 
@@ -168,7 +187,10 @@ const EventCard = ({ event, index, location, handleRegisterClick }) => {
             <button 
               onClick={(e) => {
                 e.stopPropagation();
-                handleRegisterClick(event._id, resolvedUrl);
+                // Ensure users stay on our app by opening external links in a new tab
+                window.open(resolvedUrl, '_blank', 'noopener,noreferrer');
+                // Persist tracking in background
+                handleRegisterClick(event._id, null); 
               }}
               className={`font-bold text-sm px-4 py-2 rounded shadow-sm transition ${
                 event.registrationUrl
@@ -192,6 +214,14 @@ const EventCard = ({ event, index, location, handleRegisterClick }) => {
   );
 };
 
+/**
+ * Main dashboard for the GeoVibe application.
+ * Handles event discovery, filtering, real-time alerts via Socket.io,
+ * and mapping using React-Leaflet.
+ * 
+ * @component Dashboard
+ * @returns {JSX.Element} The rendered dashboard page.
+ */
 const Dashboard = () => {
   const { token, logout } = useContext(AuthContext);
   const { location, error: geoError, loading: geoLoading } = useGeoLocation();
@@ -205,6 +235,14 @@ const Dashboard = () => {
   const [isDiscoverLoading, setIsDiscoverLoading] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const navigate = useNavigate();
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // PERFORMANCE: DEBOUNCING
+  // ─────────────────────────────────────────────────────────────────────────
+  // We debounce the search term and radius to avoid rapid-fire API calls.
+  // This reduces server load and prevents UI flickering.
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
+  const debouncedSearchRadius = useDebounce(searchRadius, 400);
 
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
@@ -231,8 +269,14 @@ const Dashboard = () => {
   // This pipeline guarantees that only quality, actionable events reach the UI.
   const filteredEvents = events
     .filter(event => event && event.title && event.category) // Step 1: Data integrity guard
+    .filter(event => {                                       // Step 1.5: Filter expired
+      if (!event.deadline) return true;
+      const beginningOfToday = new Date();
+      beginningOfToday.setHours(0, 0, 0, 0);
+      return new Date(event.deadline) >= beginningOfToday;
+    })
     .filter(event => {                                         // Step 2: Search filter
-      const term = searchTerm.toLowerCase();
+      const term = debouncedSearchTerm.toLowerCase();
       if (!term) return true;
       return (
         event.title.toLowerCase().includes(term) || 
@@ -262,16 +306,15 @@ const Dashboard = () => {
 
     const handleRegisterClick = async (eventId, url) => {
     try {
-        const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-                axios.post(`${API_URL}/api/events/click/${eventId}`).catch(e => console.warn('Tracking failed:', e));
-        
-                if (url) {
-          window.open(url, '_blank', 'noopener,noreferrer');
-        } else {
-          alert('Registration link is currently unavailable for this event.');
-        }
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      // Silently track engagement metrics in the background
+      axios.post(`${API_URL}/api/events/click/${eventId}`).catch(e => console.warn('Tracking failed:', e));
+      
+      if (url) {
+        window.open(url, '_blank', 'noopener,noreferrer');
+      }
     } catch (err) {
-        console.error('Registration link failed:', err);
+      console.error('Registration link failed:', err);
     }
   };
 
@@ -296,7 +339,7 @@ const Dashboard = () => {
     });
 
     return () => socket.disconnect();
-  }, [location, searchRadius]);
+  }, [location, debouncedSearchRadius]);
 
   useEffect(() => {
     if (location) {
@@ -373,7 +416,7 @@ const Dashboard = () => {
           setEventsLoading(false);
         });
     }
-  }, [location, activeCategory, searchRadius]);
+  }, [location, activeCategory, debouncedSearchRadius]);
 
   const featuredEvents = sortedEvents.slice(0, 3); 
   return (

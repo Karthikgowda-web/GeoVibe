@@ -1,9 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import MapComponent from './MapComponent';
 import { MapPin, Image as ImageIcon, Users, Calendar, Link as LinkIcon, CheckCircle2, ChevronRight, ChevronLeft } from 'lucide-react';
 import axios from 'axios';
+import { AuthContext } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 const EventStepper = ({ initialData = null, onClose, onSuccess }) => {
+  const { token } = useContext(AuthContext);
+  const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState(initialData || {
     title: '',
@@ -11,7 +15,7 @@ const EventStepper = ({ initialData = null, onClose, onSuccess }) => {
     organizerName: '',
     description: '',
     image: null,
-    registerLink: '',
+    registrationUrl: '',
     teamSizeMin: 1,
     teamSizeMax: 4,
     deadline: '',
@@ -39,13 +43,12 @@ const EventStepper = ({ initialData = null, onClose, onSuccess }) => {
 
     setLoading(true);
     try {
-      const token = localStorage.getItem('geovibe_token') || ''; 
       const data = new FormData();
       data.append('title', formData.title);
       data.append('category', formData.category);
       data.append('organizerName', formData.organizerName);
       data.append('description', formData.description);
-      data.append('registerLink', formData.registerLink);
+      data.append('registrationUrl', formData.registrationUrl);
       data.append('teamSizeMin', formData.teamSizeMin);
       data.append('teamSizeMax', formData.teamSizeMax);
       if (formData.deadline) data.append('deadline', formData.deadline);
@@ -66,13 +69,18 @@ const EventStepper = ({ initialData = null, onClose, onSuccess }) => {
         res = await axios.post(`${API_URL}/api/events/`, data, { headers });
       }
       
-      if (res.status === 200 || res.status === 201) {
-        // Pass res.data.data (the actual event object) to ensure the 
-        // Host Portal list can update its state correctly.
+    if (res.status === 200 || res.status === 201) {
+        // On success, update the host list and redirect to the dashboard.
         onSuccess(res.data.data);
+        navigate('/dashboard');
       }
     } catch (err) {
-      alert(err.response?.data?.message || "Failed to save event");
+      console.error('[UPLOAD ERROR] Status:', err.response?.status);
+      console.error('[UPLOAD ERROR] Response:', err.response?.data);
+      console.error('[UPLOAD ERROR] Full error:', err);
+      // Show the specific message returned from the server, with a clear fallback.
+      const serverMessage = err.response?.data?.message || err.message || 'Upload failed. Please check your connection and try again.';
+      alert(serverMessage);
     } finally {
       setLoading(false);
     }
@@ -132,7 +140,7 @@ const EventStepper = ({ initialData = null, onClose, onSuccess }) => {
               </div>
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-1.5 flex items-center"><LinkIcon size={16} className="mr-2"/> Registration Link</label>
-                <input type="url" value={formData.registerLink} onChange={e=>setFormData({...formData, registerLink: e.target.value})} className="w-full border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary transition" placeholder="https://..." />
+                <input type="url" value={formData.registrationUrl} onChange={e=>setFormData({...formData, registrationUrl: e.target.value})} className="w-full border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary transition" placeholder="https://..." />
               </div>
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-1.5">Full Description</label>

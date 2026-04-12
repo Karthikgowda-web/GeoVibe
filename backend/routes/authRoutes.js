@@ -1,13 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/authMiddleware');
-const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
 const authController = require('../controllers/authController');
-
-const { profileStorage } = require('../config/cloudinary');
-const upload = multer({ storage: profileStorage });
+const upload = require('../config/gridfs');
 
 router.post('/register', authController.register);
 router.post('/login', authController.login);
