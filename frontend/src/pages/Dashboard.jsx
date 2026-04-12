@@ -530,28 +530,58 @@ const Dashboard = () => {
           <div className="w-full lg:w-2/3 space-y-8">
             
             {}
-            {featuredEvents.length > 0 && (
-              <section>
-                <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-xl font-bold text-gray-900 flex items-center">Featured Vibes</h2>
-                  <button className="text-sm font-semibold text-brand-primary hover:text-blue-800 flex items-center">
-                    View all <ChevronRight size={16} />
-                  </button>
-                </div>
-                <div className="flex overflow-x-auto space-x-4 pb-4 hide-scrollbar snap-x">
-                  {featuredEvents.map((evt, idx) => (
-                    <div key={idx} className="shrink-0 w-80 h-48 rounded-2xl relative overflow-hidden snap-start shadow-md group cursor-pointer border border-gray-200">
-                      <img src={evt.imageUrl} alt={evt.title} className="w-full h-full object-cover group-hover:scale-105 transition duration-500" />
-                      <div className="absolute inset-0 bg-gradient-to-t from-gray-900/90 via-gray-900/40 to-transparent"></div>
-                      <div className="absolute bottom-4 left-4 right-4">
-                        <span className="inline-block px-2 py-1 bg-brand-primary text-white text-[10px] font-bold uppercase rounded mb-2">Editor's Pick</span>
-                        <h3 className="text-white font-bold text-lg leading-tight line-clamp-2">{evt.title}</h3>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            )}
+            {featuredEvents.length > 0 && (() => {
+              const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+              const fallbackGradients = [
+                'from-blue-600 to-indigo-800',
+                'from-emerald-500 to-teal-700',
+                'from-purple-600 to-pink-700',
+              ];
+              return (
+                <section>
+                  <div className="flex justify-between items-center mb-4">
+                    <h2 className="text-xl font-bold text-gray-900 flex items-center">Featured Vibes</h2>
+                    <button className="text-sm font-semibold text-brand-primary hover:text-blue-800 flex items-center">
+                      View all <ChevronRight size={16} />
+                    </button>
+                  </div>
+                  <div className="flex overflow-x-auto space-x-4 pb-4 hide-scrollbar snap-x">
+                    {featuredEvents.map((evt, idx) => {
+                      // Unified image resolution: same logic as EventCard.
+                      // Priority: GridFS (imageName) → external URL (imageUrl) → gradient fallback.
+                      const cacheBust = `?t=${Date.now()}`;
+                      const featuredImage = evt.imageName
+                        ? `${API_URL}/api/events/image/${evt.imageName}${cacheBust}`
+                        : (evt.imageUrl || null);
+
+                      return (
+                        <div key={evt._id || idx} className="shrink-0 w-80 h-48 rounded-2xl relative overflow-hidden snap-start shadow-md group cursor-pointer border border-gray-200">
+                          {featuredImage ? (
+                            <img
+                              src={featuredImage}
+                              alt={evt.title}
+                              className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+                              onError={(e) => {
+                                // If GridFS image fails, fall back to gradient
+                                e.target.style.display = 'none';
+                                e.target.nextSibling.classList.remove('hidden');
+                              }}
+                            />
+                          ) : null}
+                          {/* Gradient fallback — shown when imageName is absent */}
+                          <div className={`${featuredImage ? 'hidden' : ''} absolute inset-0 bg-gradient-to-br ${fallbackGradients[idx % fallbackGradients.length]}`} />
+                          <div className="absolute inset-0 bg-gradient-to-t from-gray-900/90 via-gray-900/40 to-transparent" />
+                          <div className="absolute bottom-4 left-4 right-4">
+                            <span className="inline-block px-2 py-1 bg-brand-primary text-white text-[10px] font-bold uppercase rounded mb-2">Editor's Pick</span>
+                            <h3 className="text-white font-bold text-lg leading-tight line-clamp-2">{evt.title}</h3>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </section>
+              );
+            })()}
 
             {/* Opportunities List */}
             <section>
