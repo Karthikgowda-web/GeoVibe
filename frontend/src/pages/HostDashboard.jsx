@@ -5,6 +5,7 @@ import axios from 'axios';
 import { Settings, BarChart, Edit, Trash2, CheckCircle, ExternalLink, Calendar, Users, Target } from 'lucide-react';
 import { AuthContext } from '../context/AuthContext';
 import { Navigate } from 'react-router-dom';
+import { getEventImageUrl } from '../utils/imageUrl';
 
 const HostDashboard = () => {
   const { token, user } = useContext(AuthContext);
@@ -148,7 +149,15 @@ const HostDashboard = () => {
                           </span>
                        </div>
                      </div>
-                     {event.imageUrl && <img src={event.imageUrl} alt="thumbnail" className="w-16 h-16 rounded-lg object-cover border border-gray-100" />}
+                     <div className="w-16 h-16 rounded-lg overflow-hidden border border-gray-100 bg-gray-50 flex items-center justify-center shrink-0">
+                       {(event.imageName || event.imageUrl) ? (
+                         <img src={getEventImageUrl(event.imageName) || event.imageUrl} alt="thumbnail" className="w-full h-full object-cover" />
+                       ) : (
+                         <div className="text-gray-300">
+                            {event.category === 'Hackathon' ? <Target size={20} /> : <Calendar size={20} />}
+                         </div>
+                       )}
+                     </div>
                    </div>
                    
                    <p className="text-sm text-gray-500 line-clamp-2 mt-auto mb-4">{event.description}</p>

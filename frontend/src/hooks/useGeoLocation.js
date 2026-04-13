@@ -7,10 +7,10 @@ export const useGeoLocation = () => {
 
   useEffect(() => {
     if (!navigator.geolocation) {
-      setError('Using default location (Bangalore) to show nearby events.');
+      setError('Using Reva University coordinates for demo consistency.');
       setLocation({
-        lat: 12.9716,
-        lng: 77.5946
+        lat: 13.1144,
+        lng: 77.6370
       });
       setLoading(false);
       return;
@@ -25,10 +25,10 @@ export const useGeoLocation = () => {
     };
 
     const handleError = (err) => {
-      setError('Using default location (Bangalore) to show nearby events.');
+      setError('Using Reva University coordinates for demo consistency.');
       setLocation({
-        lat: 12.9716,
-        lng: 77.5946
+        lat: 13.1144,
+        lng: 77.6370
       });
       setLoading(false);
     };

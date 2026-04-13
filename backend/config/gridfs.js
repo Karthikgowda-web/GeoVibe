@@ -36,7 +36,10 @@ const gridFsStorage = {
       });
 
       file.stream.pipe(uploadStream)
-        .on('error', cb)
+        .on('error', (err) => {
+          console.error('[GRIDFS UPLOAD ERROR]', err);
+          cb(err);
+        })
         .on('finish', () => {
           cb(null, {
             filename: filename,

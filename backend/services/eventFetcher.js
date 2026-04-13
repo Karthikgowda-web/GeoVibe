@@ -1,7 +1,16 @@
 const axios = require('axios');
 const Event = require('../models/Event');
 
+let lastFetchTime = 0;
+const CACHE_DURATION = 1000 * 60 * 60 * 6; // 6 hours (events change less frequently than news)
+
 const syncExternalEvents = async () => {
+    const now = Date.now();
+    if (now - lastFetchTime < CACHE_DURATION) {
+        console.log('[FETCHER] Use cached PredictHQ data. Skipping API call.');
+        return;
+    }
+    
     console.log('[FETCHER] Starting real-world event synchronization...');
     const API_KEY = process.env.PREDICTHQ_API_KEY;
 
@@ -71,6 +80,7 @@ const syncExternalEvents = async () => {
             }
         }
 
+        lastFetchTime = Date.now();
         console.log(`[SUCCESS] Fetcher finished. Upserted events: ${stats.inserted} new, ${stats.updated} updated.`);
     } catch (error) {
         console.error('[FETCHER ERROR] Sync failed:', error.message);

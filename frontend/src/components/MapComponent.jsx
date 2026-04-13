@@ -4,6 +4,7 @@ import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import 'leaflet.heat';
 import { getDistance } from '../utils/distance';
+import { getEventImageUrl } from '../utils/imageUrl';
 
 // Fix default marker icon paths (Leaflet + Vite compatibility)
 delete L.Icon.Default.prototype._getIconUrl;
@@ -150,8 +151,8 @@ const MapComponent = ({ userLocation, events, isPosting, onMapClick, searchRadiu
               <Popup autoPan={false}>
                 <div className="p-1 min-w-[160px]">
                   <h3 className="font-semibold text-blue-600 m-0 leading-tight">{event.title}</h3>
-                  {event.imageUrl && (
-                    <img src={event.imageUrl} alt="event" className="w-full h-20 object-cover rounded my-2 border border-gray-200" />
+                  { (event.imageName || event.imageUrl) && (
+                    <img src={getEventImageUrl(event.imageName) || event.imageUrl} alt="event" className="w-full h-20 object-cover rounded my-2 border border-gray-200" />
                   )}
                   <p className="text-xs text-gray-700 my-1 pb-1 line-clamp-2">{event.description}</p>
                   <p className="text-[10px] text-gray-500 mb-2 font-mono">Distance: {distanceStr}</p>

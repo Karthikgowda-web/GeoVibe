@@ -69,10 +69,14 @@ const EventStepper = ({ initialData = null, onClose, onSuccess }) => {
         res = await axios.post(`${API_URL}/api/events/`, data, { headers });
       }
       
-    if (res.status === 200 || res.status === 201) {
-        // On success, update the host list and redirect to the dashboard.
-        onSuccess(res.data.data);
-        navigate('/dashboard');
+      if (res.status === 200 || res.status === 201) {
+        // Post-Host Refresh Logic: Force a full browser reload to the dashboard
+        // with cache-busting and coordinate parameters to ensure the new pin is focused.
+        const savedEvent = res.data.data;
+        const lat = savedEvent.location?.coordinates[1];
+        const lng = savedEvent.location?.coordinates[0];
+        
+        window.location.href = `/dashboard?refresh=true&lat=${lat}&lng=${lng}&v=${Date.now()}`;
       }
     } catch (err) {
       console.error('[UPLOAD ERROR] Status:', err.response?.status);

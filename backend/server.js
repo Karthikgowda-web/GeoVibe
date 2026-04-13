@@ -23,6 +23,9 @@ const fetchExternalEvents = require('./services/eventFetcher');
 const syncGlobalDevEvents = require('./services/syncEngine');
 const syncLiveEventsFromAPI = require('./services/eventSync');
 const syncEventAggregator = require('./services/eventAggregator');
+const syncNews = require('./services/newsService');
+const syncMeetups = require('./services/meetupService');
+const syncCultural = require('./services/culturalService');
 
 const errorMiddleware = require('./middleware/errorMiddleware');
 
@@ -51,6 +54,8 @@ app.use('/api/', limiter);
 
 const allowedOrigins = [
   'http://localhost:5173',
+  'http://localhost:5174',
+  'http://localhost:5175',
   'https://geo-vibe-nine.vercel.app',
   process.env.FRONTEND_URL
 ].filter(Boolean);
@@ -110,6 +115,14 @@ const startServer = () => {
        cron.schedule('0 8 * * *', () => syncGlobalDevEvents());
        cron.schedule('0 */12 * * *', () => syncLiveEventsFromAPI());
        cron.schedule('0 */12 * * *', () => syncEventAggregator());
+       cron.schedule('0 */4 * * *', () => syncNews());
+       cron.schedule('0 */8 * * *', () => syncMeetups());
+       cron.schedule('0 */12 * * *', () => syncCultural());
+       
+       // Immediate initial run on startup for dev visibility
+       syncNews();
+       syncMeetups();
+       syncCultural();
     });
 };
 

@@ -9,209 +9,27 @@ import { getDistance } from '../utils/distance';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { useDebounce } from '../hooks/useDebounce';
+import { getEventImageUrl } from '../utils/imageUrl';
+import EventCard from '../components/EventCard';
+import { Loader2, RefreshCw } from 'lucide-react';
 
 const CATEGORIES = [
-  { name: 'Hackathons', icon: <Code size={18} /> },
+  { name: 'Hackathon', icon: <Code size={18} /> },
   { name: 'News & Alerts', icon: <Globe size={18} /> },
   { name: 'Cultural Events', icon: <Monitor size={18} /> },
   { name: 'Meetups', icon: <Users size={18} /> },
   { name: 'Workshops', icon: <Zap size={18} /> },
 ];
 
-const mockTags = ['Engineering', 'Open to All', 'Networking', 'Innovation'];
-
-// ─────────────────────────────────────────────────────────────────────────────
-// DATA INTEGRITY HELPER
-// ─────────────────────────────────────────────────────────────────────────────
-// This function generates a smart fallback registration link.
-// Data Integrity Principle: Every event shown to a user MUST have a valid,
-// actionable "Register Now" link. If the database entry is missing a direct URL,
-// we degrade gracefully by generating a pre-filled Unstop search URL using the
-// event's title. This ensures the button is NEVER broken for the end-user.
-const formatExternalUrl = (url) => {
-  if (!url) return null;
-  if (url.startsWith('http')) return url;
-  return `https://unstop.com${url.startsWith('/') ? '' : '/'}${url}`;
-};
-
-const getRegistrationUrl = (event) => {
-  if (event.registrationUrl) {
-    return formatExternalUrl(event.registrationUrl);
+const getCategoryIcon = (cat) => {
+  switch(cat) {
+    case 'Hackathon': return <Code size={40} className="text-gray-300" />;
+    case 'News & Alerts': return <Globe size={40} className="text-gray-300" />;
+    case 'Cultural Events': return <Monitor size={40} className="text-gray-300" />;
+    case 'Meetups': return <Users size={40} className="text-gray-300" />;
+    case 'Workshops': return <Zap size={40} className="text-gray-300" />;
+    default: return <Hash size={40} className="text-gray-300" />;
   }
-  if (event.title) {
-    return `https://unstop.com/search?q=${encodeURIComponent(event.title)}`;
-  }
-  return null;
-};
-
-const EventCard = ({ event, index, location, handleRegisterClick }) => {
-  // Data Integrity Check: Skip rendering completely malformed event objects.
-  if (!event || !event.title) return null;
-
-  // Compute human-readable distance string from GeoJSON [lng, lat] coordinates.
-  let distanceStr = 'Unknown';
-  if (location && event.location?.coordinates && Array.isArray(event.location.coordinates)) {
-    const lat = event.location.coordinates[1];
-    const lng = event.location.coordinates[0];
-    if (typeof lat === 'number' && typeof lng === 'number') {
-      const distance = getDistance(location.lat, location.lng, lat, lng);
-      distanceStr = distance >= 1000 ? (distance / 1000).toFixed(1) + ' km away' : Math.round(distance) + ' m away';
-    }
-  }
-
-  const teamSizeMin = event.teamSizeMin || 1;
-  const teamSizeMax = event.teamSizeMax || ((index % 4) + 2);
-  const isUserUpload = event.source === 'User';
-  const organizer = isUserUpload 
-    ? (event.author?.username || event.organizerName || 'Verified User')
-    : (event.organizerName || 'GeoVibe Verified Network');
-  
-  let daysLeft = (index % 10) + 1; 
-  if (event.deadline) {
-    const diff = new Date(event.deadline) - new Date();
-    daysLeft = diff > 0 ? Math.ceil(diff / (1000 * 60 * 60 * 24)) : 0;
-  }
-
-  const fallbackImage = `https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&q=80&w=800`;
-  
-  // GridFS Support: Build streaming URL if imageName exists, otherwise fallback to imageUrl or default placeholder.
-  // The API_URL is dynamically resolved from environment variables.
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-  const mainImage = event.imageName 
-    ? `${API_URL}/api/events/image/${event.imageName}` 
-    : (event.imageUrl || fallbackImage);
-
-  // Resolve the smartest available registration URL for this event.
-  const resolvedUrl = getRegistrationUrl(event);
-
-  const isToday = event.deadline && new Date(event.deadline).toDateString() === new Date().toDateString();
-
-  return (
-    <div className="bg-white rounded-xl p-5 border border-gray-200 shadow-sm hover:shadow-lg hover:-translate-y-1 transition duration-300 flex flex-col sm:flex-row gap-5">
-      <div className="h-40 w-full sm:w-48 shrink-0 rounded-lg overflow-hidden border border-gray-100 relative bg-gray-100">
-        <img 
-          src={mainImage} 
-          alt={event.title || 'Event Details'} 
-          className="w-full h-full object-cover" 
-          onError={(e) => { e.target.src = fallbackImage; }}
-        />
-        {isToday ? (
-          <div className="absolute top-2 right-2 bg-green-500/90 backdrop-blur text-white text-[10px] font-bold px-2 py-1 rounded flex items-center shadow-sm">
-             Completed
-          </div>
-        ) : (
-          <div className="absolute top-2 right-2 bg-white/90 backdrop-blur text-gray-800 text-xs font-bold px-2 py-0.5 rounded flex items-center shadow-sm">
-            <MapPin size={12} className="mr-1 text-brand-primary" /> Live
-          </div>
-        )}
-      </div>
-      
-      <div className="flex-1 flex flex-col justify-between">
-        <div>
-          <div className="flex items-center">
-            <h3 className="text-xl font-extrabold text-gray-900 pr-2 line-clamp-1">
-              {event.title || 'Untitled Opportunity'}
-            </h3>
-            {event.isVerified && <CheckCircle size={18} className="text-blue-500 fill-blue-50" />}
-          </div>
-          {!isUserUpload ? (
-            <div className="flex items-center mt-1 space-x-2">
-              {event.registrationUrl && event.source === 'External' && (
-                <span className="inline-flex items-center font-bold text-[10px] text-brand-primary bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200 animate-pulse">
-                  🔥 Live Source
-                </span>
-              )}
-              <span className={`inline-flex items-center font-bold text-[10px] px-2 py-0.5 rounded-full border ${
-                event.source === 'External' 
-                  ? (event.sourcePlatform === 'PredictHQ' ? 'text-cyan-700 bg-cyan-100 border-cyan-200' : 'text-indigo-700 bg-indigo-100 border-indigo-200')
-                  : 'text-gray-600 bg-gray-100 border-gray-200'
-              }`}>
-                {event.source === 'External' 
-                  ? (event.sourcePlatform === 'PredictHQ' ? '📡 External API' : (event.sourcePlatform === 'Google Events' ? '🔍 Google Events' : `🌐 ${event.sourcePlatform || 'Public Source'}`))
-                  : '🤖 System-Generated'}
-              </span>
-              {event.isOnline && (
-                <span className="inline-flex items-center font-bold text-[10px] text-orange-700 bg-orange-100 px-2 py-0.5 rounded-full border border-orange-200">
-                  ⚡ Remote
-                </span>
-              )}
-            </div>
-          ) : (
-            <div className="flex items-center mt-1 space-x-2">
-              <span className="inline-flex items-center font-bold text-[10px] text-green-700 bg-green-100 px-2 py-0.5 rounded-full border border-green-200">
-                ✅ Verified Organizer
-              </span>
-              <p className="text-sm text-gray-600 font-bold">{organizer}</p>
-            </div>
-          )}
-        </div>
-
-        {isUserUpload && event.problemStatement && (
-          <div className="mt-3 p-3 bg-gray-50 border border-gray-100 rounded-lg">
-            <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Problem Statement</p>
-            <p className="text-sm text-gray-800 whitespace-pre-wrap line-clamp-2">{event.problemStatement}</p>
-          </div>
-        )}
-        
-        <div className="flex flex-wrap items-center gap-3 mt-3 text-sm text-gray-600 font-medium">
-          <div className="flex items-center bg-gray-50 px-2.5 py-1.5 rounded-md border border-gray-100">
-            <Users size={16} className="text-blue-500 mr-2" />
-            <span>Team: {teamSizeMin} - {teamSizeMax}</span>
-          </div>
-          <div className="flex items-center bg-gray-50 px-2.5 py-1.5 rounded-md border border-gray-100">
-            <MapPin size={16} className="text-brand-accent mr-2" />
-            <span className="truncate max-w-[120px]">{event.venueName || distanceStr}</span>
-          </div>
-          <div className="flex items-center bg-gray-50 px-2.5 py-1.5 rounded-md border border-gray-100">
-            <Clock size={16} className="text-orange-500 mr-2" />
-            <span className={isToday ? 'text-green-600 font-bold' : (daysLeft === 0 ? 'text-red-500 font-bold' : '')}>
-              {isToday ? 'Completed' : (daysLeft === 0 ? 'Expired' : `${daysLeft} Days Left`)}
-            </span>
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between mt-4">
-          <div className="flex items-center space-x-2">
-            <span className="text-[10px] uppercase tracking-wide font-bold bg-gray-100 text-gray-600 px-2 py-1 rounded">
-              {event.category || 'Other'}
-            </span>
-            {mockTags.slice(0, 2).map(tag => (
-              <span key={tag} className="text-[10px] uppercase tracking-wide font-bold bg-blue-50 text-blue-600 px-2 py-1 rounded">
-                {tag}
-              </span>
-            ))}
-          </div>
-          {/* Data Integrity: Always show an actionable button. If direct URL exists,
-              use it. Otherwise, use the generated smart fallback search link. */}
-          {resolvedUrl ? (
-            <button 
-              onClick={(e) => {
-                e.stopPropagation();
-                // Ensure users stay on our app by opening external links in a new tab
-                window.open(resolvedUrl, '_blank', 'noopener,noreferrer');
-                // Persist tracking in background
-                handleRegisterClick(event._id, null); 
-              }}
-              className={`font-bold text-sm px-4 py-2 rounded shadow-sm transition ${
-                event.registrationUrl
-                  ? 'bg-brand-primary text-white hover:bg-blue-700'
-                  : 'bg-green-600 text-white hover:bg-green-700'
-              }`}
-            >
-              {event.registrationUrl ? 'Register Now' : '🔍 Find on Unstop'}
-            </button>
-          ) : (
-            <button 
-              disabled
-              className="bg-gray-200 text-gray-500 font-bold text-sm px-4 py-2 rounded shadow-sm cursor-not-allowed"
-            >
-              Link Unavailable
-            </button>
-          )}
-        </div>
-      </div>
-    </div>
-  );
 };
 
 /**
@@ -224,7 +42,19 @@ const EventCard = ({ event, index, location, handleRegisterClick }) => {
  */
 const Dashboard = () => {
   const { token, logout } = useContext(AuthContext);
-  const { location, error: geoError, loading: geoLoading } = useGeoLocation();
+  const { location: geoCoords, error: geoError, loading: geoLoading } = useGeoLocation();
+  const [overrideLocation, setOverrideLocation] = useState(null);
+  const location = overrideLocation || geoCoords;
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const lat = params.get('lat');
+    const lng = params.get('lng');
+    if (lat && lng) {
+      setOverrideLocation({ lat: parseFloat(lat), lng: parseFloat(lng) });
+    }
+  }, []);
+
   const [userProfile, setUserProfile] = useState(null);
   const [events, setEvents] = useState([]);
   const [eventsLoading, setEventsLoading] = useState(false);
@@ -431,10 +261,19 @@ const Dashboard = () => {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
                 <input 
                   type="text" 
-                  placeholder="Search opportunities near you" 
+                  placeholder="Search vibes (or type 'discover', 'host', 'settings'...)" 
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full bg-gray-100 border border-transparent rounded-full py-2.5 pl-10 pr-4 text-sm text-gray-700 focus:bg-white focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20 outline-none transition"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      const term = searchTerm.toLowerCase().trim();
+                      if (term === 'discover') navigate('/discover');
+                      else if (term === 'host') navigate('/host');
+                      else if (term === 'settings') navigate('/settings');
+                      else if (term === 'dashboard') navigate('/dashboard');
+                    }
+                  }}
+                  className="w-full bg-gray-100 border border-transparent rounded-full py-2.5 pl-10 pr-4 text-sm text-gray-700 focus:bg-white focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20 outline-none transition shadow-inner"
                 />
               </div>
               <div className="flex bg-gray-100 p-1 rounded-full items-center shrink-0 border border-gray-200 shadow-inner">
@@ -547,29 +386,26 @@ const Dashboard = () => {
                   </div>
                   <div className="flex overflow-x-auto space-x-4 pb-4 hide-scrollbar snap-x">
                     {featuredEvents.map((evt, idx) => {
-                      // Unified image resolution: same logic as EventCard.
-                      // Priority: GridFS (imageName) → external URL (imageUrl) → gradient fallback.
-                      const cacheBust = `?t=${Date.now()}`;
-                      const featuredImage = evt.imageName
-                        ? `${API_URL}/api/events/image/${evt.imageName}${cacheBust}`
-                        : (evt.imageUrl || null);
+                      const featuredImage = getEventImageUrl(evt.imageName) || evt.imageUrl;
 
                       return (
-                        <div key={evt._id || idx} className="shrink-0 w-80 h-48 rounded-2xl relative overflow-hidden snap-start shadow-md group cursor-pointer border border-gray-200">
+                        <div key={evt._id || idx} className="shrink-0 w-80 h-48 rounded-2xl relative overflow-hidden snap-start shadow-md group cursor-pointer border border-gray-200 flex items-center justify-center bg-gray-50">
                           {featuredImage ? (
                             <img
                               src={featuredImage}
                               alt={evt.title}
                               className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
                               onError={(e) => {
-                                // If GridFS image fails, fall back to gradient
+                                // If image fails, fall back to icon
                                 e.target.style.display = 'none';
                                 e.target.nextSibling.classList.remove('hidden');
                               }}
                             />
                           ) : null}
-                          {/* Gradient fallback — shown when imageName is absent */}
-                          <div className={`${featuredImage ? 'hidden' : ''} absolute inset-0 bg-gradient-to-br ${fallbackGradients[idx % fallbackGradients.length]}`} />
+                          <div className={`${featuredImage ? 'hidden' : ''} flex flex-col items-center`}>
+                             {getCategoryIcon(evt.category)}
+                             <span className="text-[10px] text-gray-400 font-bold mt-1 uppercase">{evt.category}</span>
+                          </div>
                           <div className="absolute inset-0 bg-gradient-to-t from-gray-900/90 via-gray-900/40 to-transparent" />
                           <div className="absolute bottom-4 left-4 right-4">
                             <span className="inline-block px-2 py-1 bg-brand-primary text-white text-[10px] font-bold uppercase rounded mb-2">Editor's Pick</span>
@@ -617,14 +453,35 @@ const Dashboard = () => {
                 </div>
               )}
               
-              {!eventsLoading && filteredEvents.length === 0 && location && (
-                <div className="p-8 text-center text-gray-500 bg-white rounded-2xl border border-gray-200 border-dashed">
-                  <p className="mb-2">No opportunities found in your immediate zone matching these filters.</p>
-                  {searchRadius === 15 && (
-                    <p className="text-sm">
-                      Nothing here? <button onClick={() => setSearchRadius(50)} className="text-brand-primary font-bold hover:underline cursor-pointer">Try expanding your search to 50km</button>
-                    </p>
-                  )}
+              {!eventsLoading && !isDiscoverLoading && filteredEvents.length === 0 && location && (
+                <div className="p-12 text-center bg-white rounded-3xl border border-gray-200 border-dashed shadow-sm">
+                  <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Compass size={32} className="text-gray-300 animate-pulse" />
+                  </div>
+                  <h3 className="text-lg font-bold text-gray-800">Local Vibes are quiet</h3>
+                  <p className="text-gray-500 max-w-xs mx-auto mt-2 text-sm">No opportunities found within {searchRadius}km matching your filters.</p>
+                  
+                  <div className="mt-6 flex flex-col items-center gap-3">
+                    {searchRadius < 100 ? (
+                      <button 
+                        onClick={() => setSearchRadius(searchRadius < 50 ? 50 : 100)}
+                        className="px-6 py-2 bg-brand-primary text-white font-bold rounded-xl shadow-md hover:bg-blue-700 transition flex items-center"
+                      >
+                        <RefreshCw size={16} className="mr-2" /> 
+                        Expand Search to {searchRadius < 50 ? '50' : '100'}km
+                      </button>
+                    ) : (
+                      <button 
+                        onClick={() => {
+                          setSearchTerm('');
+                          setActiveCategory('All');
+                        }}
+                        className="text-brand-primary font-bold hover:underline"
+                      >
+                        Explore all categories instead?
+                      </button>
+                    )}
+                  </div>
                 </div>
               )}
  
@@ -637,9 +494,23 @@ const Dashboard = () => {
                     ))}
                   </div>
                 ) : (
-                  <div className="p-12 text-center bg-white rounded-2xl border border-dashed border-gray-200">
-                    <p className="text-gray-500 font-medium">No results match your current search or filters.</p>
-                    <button onClick={resetFilters} className="mt-2 text-brand-primary font-bold hover:underline">Clear all filters</button>
+                  <div className="p-12 text-center bg-white rounded-3xl border border-dashed border-gray-200 shadow-sm">
+                    <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Plus size={32} className="text-gray-300" />
+                    </div>
+                    <h3 className="text-xl font-bold text-gray-800">No events here yet</h3>
+                    <p className="text-gray-500 max-w-xs mx-auto mt-2">Be the first to spark something in this category! Host an event and pin it on our map.</p>
+                    <div className="mt-6 flex flex-col items-center gap-4">
+                      <button 
+                        onClick={() => navigate('/host')}
+                        className="px-8 py-3 bg-brand-primary text-white font-bold rounded-2xl shadow-lg hover:bg-blue-700 transition transform hover:-translate-y-1"
+                      >
+                        Host Your Own Event
+                      </button>
+                      <button onClick={resetFilters} className="text-sm text-gray-400 hover:text-brand-primary font-bold">
+                        Or clear all filters
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>

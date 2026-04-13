@@ -15,7 +15,11 @@ exports.getAllEvents = catchAsync(async (req, res) => {
   beginningOfToday.setHours(0, 0, 0, 0);
 
   const events = await Event.find({ 
-    deadline: { $gte: beginningOfToday } 
+    $or: [
+      { deadline: { $gte: beginningOfToday } },
+      { deadline: { $exists: false } },
+      { deadline: null }
+    ]
   }).sort({ createdAt: -1 }).populate('author', 'username');
 
   console.log('[API] getAllEvents - Future/Today events found:', events.length);
@@ -35,7 +39,11 @@ exports.getVerifiedEvents = catchAsync(async (req, res) => {
   beginningOfToday.setHours(0, 0, 0, 0);
 
   const events = await Event.find({
-    deadline: { $gte: beginningOfToday }
+    $or: [
+      { deadline: { $gte: beginningOfToday } },
+      { deadline: { $exists: false } },
+      { deadline: null }
+    ]
   }).sort({ createdAt: -1 }).populate('author', 'username');
   
   res.json({ status: 'success', results: events.length, data: events });
@@ -218,7 +226,12 @@ exports.getNearbyEvents = catchAsync(async (req, res) => {
 
   const beginningOfToday = new Date();
   beginningOfToday.setHours(0, 0, 0, 0);
-  query.deadline = { $gte: beginningOfToday };
+  
+  query.$or = [
+    { deadline: { $gte: beginningOfToday } },
+    { deadline: { $exists: false } },
+    { deadline: null }
+  ];
 
   const events = await Event.find(query);
   console.log(`[API] getNearbyEvents - lat:${lat} lng:${lng} radius:${radius}km -> Found: ${events.length} events`);
