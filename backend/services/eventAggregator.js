@@ -146,7 +146,7 @@ const syncEvents = async () => {
                                 await Event.findOneAndUpdate(
                     { registrationUrl: item.targetReg },
                     { $set: mappedEvent },
-                    { upsert: true, new: true, setDefaultsOnInsert: true }
+                    { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
                 );
                 syncStats.upserted++;
             } catch (err) {

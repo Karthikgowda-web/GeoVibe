@@ -58,6 +58,7 @@ exports.getVerifiedEvents = catchAsync(async (req, res) => {
  * @returns {Promise<void>}
  */
 exports.createEvent = catchAsync(async (req, res) => {
+  req.setTimeout(30000); // 30s timeout for binary uploads
   const { title, description, longitude, latitude, category, organizerName, teamSizeMin, teamSizeMax, deadline, registrationUrl, registerLink } = req.body;
   
   let imageUrl = null;
@@ -130,6 +131,7 @@ exports.getMyEvents = catchAsync(async (req, res) => {
  * @returns {Promise<void>}
  */
 exports.updateEvent = catchAsync(async (req, res) => {
+  req.setTimeout(30000); // 30s timeout for binary updates
   let event = await Event.findById(req.params.id);
   if (!event) return res.status(404).json({ status: 'fail', message: 'Event not found' });
   
@@ -250,7 +252,7 @@ exports.trackClick = catchAsync(async (req, res) => {
   const event = await Event.findByIdAndUpdate(
     req.params.id, 
     { $inc: { registrationClicks: 1 } }, 
-    { new: true }
+    { returnDocument: 'after' }
   );
   if (!event) return res.status(404).json({ status: 'fail', message: 'Event not found' });
   

@@ -42,6 +42,7 @@ const syncCultural = async () => {
             }
         ];
 
+        console.log('[CULTURAL] Events Found:', items.length);
         let syncedCount = 0;
         for (const item of items) {
             const mappedItem = {
@@ -63,7 +64,7 @@ const syncCultural = async () => {
             await Event.findOneAndUpdate(
                 { registrationUrl: item.url },
                 { $set: mappedItem },
-                { upsert: true, new: true }
+                { upsert: true, returnDocument: 'after' }
             );
             syncedCount++;
         }

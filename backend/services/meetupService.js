@@ -63,6 +63,7 @@ const syncMeetups = async () => {
             }
         ];
 
+        console.log('[MEETUP] Events Found:', results.length);
         let syncedCount = 0;
         for (const item of results) {
             const meetupEvent = {
@@ -84,7 +85,7 @@ const syncMeetups = async () => {
             await Event.findOneAndUpdate(
                 { registrationUrl: item.url },
                 { $set: meetupEvent },
-                { upsert: true, new: true }
+                { upsert: true, returnDocument: 'after' }
             );
             syncedCount++;
         }
