@@ -87,7 +87,7 @@ const syncGlobalDevEvents = async () => {
             await Event.findOneAndUpdate(
                 { originalLink: item.link },
                 { $set: eventData },
-                { upsert: true, new: true, setDefaultsOnInsert: true }
+                { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
             );
             stats.upserted++;
         }

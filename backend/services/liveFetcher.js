@@ -102,7 +102,7 @@ const syncSerpApiEvents = async () => {
                         await Event.findOneAndUpdate(
                 { registrationUrl: item.link },
                 { $set: mappedEvent },
-                { upsert: true, new: true }
+                { upsert: true, returnDocument: 'after' }
             );
             stats.upserted++;
         }

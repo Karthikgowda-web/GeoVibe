@@ -95,7 +95,7 @@ const syncLiveEventsFromAPI = async () => {
                                 await Event.findOneAndUpdate(
                     { registrationUrl: item.link },
                     { $set: mappedEvent },
-                    { upsert: true, new: true, setDefaultsOnInsert: true }
+                    { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
                 );
 
                 stats.upserted++;

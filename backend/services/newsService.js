@@ -87,7 +87,7 @@ const syncNews = async () => {
             await Event.findOneAndUpdate(
                 { registrationUrl: article.url },
                 { $set: newsEvent },
-                { upsert: true, new: true }
+                { upsert: true, returnDocument: 'after' }
             );
             syncedCount++;
         }

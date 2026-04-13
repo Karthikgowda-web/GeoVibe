@@ -95,7 +95,7 @@ exports.updateProfile = catchAsync(async (req, res) => {
   const user = await User.findByIdAndUpdate(
     req.user.id,
     { $set: updateData },
-    { new: true, runValidators: true }
+    { returnDocument: 'after', runValidators: true }
   ).select('-password');
 
   if (!user) {
