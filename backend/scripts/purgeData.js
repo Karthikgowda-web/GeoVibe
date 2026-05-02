@@ -87,7 +87,8 @@ const purgeAndSync = async () => {
     try {
         const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/geovibe';
         console.log('[PURGE] Connecting to MongoDB...');
-        await mongoose.connect(MONGO_URI);
+        require('../config/db');
+        await mongoose.connection.asPromise();
         
         console.log('[PURGE] Deleting all existing events...');
         const deleteResult = await Event.deleteMany({});

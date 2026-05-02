@@ -14,7 +14,8 @@ async function setupIndexes() {
 
     console.log('[INDEXER] Connecting to database...');
     try {
-        await mongoose.connect(MONGO_URI);
+        require('../config/db');
+        await mongoose.connection.asPromise();
         console.log('[INDEXER] Connection established.');
 
         console.log('[INDEXER] Verifying 2dsphere index on Event.location...');

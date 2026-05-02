@@ -4,7 +4,8 @@ require('dotenv').config();
 
 async function checkEvents() {
     try {
-        await mongoose.connect(process.env.MONGO_URI);
+        require('./config/db');
+        await mongoose.connection.asPromise();
         console.log('Connected to MongoDB');
 
         const beginningOfToday = new Date();

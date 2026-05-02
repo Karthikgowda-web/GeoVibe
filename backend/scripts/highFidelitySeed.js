@@ -89,7 +89,8 @@ async function downloadAndUploadImage(url, bucket) {
 async function runSeeder() {
   try {
     const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/geovibe';
-    await mongoose.connect(MONGO_URI);
+    require('../config/db');
+        await mongoose.connection.asPromise();
     console.log('[SEEDER] Connected to MongoDB.');
 
     // Clear previous high-fidelity seeds if any (to avoid duplicates during dev)

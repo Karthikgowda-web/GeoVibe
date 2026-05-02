@@ -3,7 +3,7 @@ const router = express.Router();
 const auth = require('../middleware/authMiddleware');
 const eventController = require('../controllers/eventController');
 
-const upload = require('../config/gridfs');
+const upload = require('../middleware/uploadMiddleware');
 
 router.get('/', eventController.getAllEvents);
 router.get('/all', eventController.getVerifiedEvents);

@@ -235,9 +235,23 @@ exports.getNearbyEvents = catchAsync(async (req, res) => {
     { deadline: null }
   ];
 
-  const events = await Event.find(query);
-  console.log(`[API] getNearbyEvents - lat:${lat} lng:${lng} radius:${radius}km -> Found: ${events.length} events`);
-  res.json({ status: 'success', results: events.length, data: events });
+  try {
+    const events = await Event.find(query);
+    console.log(`[API] getNearbyEvents - lat:${lat} lng:${lng} radius:${radius}km -> Found: ${events.length} events`);
+    res.json({ status: 'success', results: events.length, data: events });
+  } catch (error) {
+    console.error('[CRITICAL API ERROR] Geospatial query failed on getNearbyEvents.');
+    console.error('Error Details:', error.message);
+    if (error.message.includes('2dsphere') || error.code === 291) {
+      console.error('-> ACTION REQUIRED: You must create a 2dsphere index on the "location" field in MongoDB Atlas.');
+      return res.status(500).json({ 
+        status: 'error', 
+        message: 'Geospatial search is misconfigured. Please ensure the 2dsphere index is created on MongoDB Atlas.', 
+        error: error.message 
+      });
+    }
+    res.status(500).json({ status: 'error', message: 'Failed to retrieve nearby events', error: error.message });
+  }
 });
 
 /**

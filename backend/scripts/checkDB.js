@@ -20,7 +20,8 @@ const getRandomCoordinateOffset = (minKm, maxKm) => {
 const checkDB = async () => {
     try {
         const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/geovibe';
-        await mongoose.connect(MONGO_URI);
+        require('../config/db');
+        await mongoose.connection.asPromise();
         console.log('[DB] Connected for diagnostics...');
 
         const systemCount = await Event.countDocuments({ source: 'System' });

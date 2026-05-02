@@ -65,7 +65,8 @@ const sampleEvents = [
 const seedData = async () => {
     try {
         const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/geovibe';
-        await mongoose.connect(MONGO_URI);
+        require('../config/db');
+        await mongoose.connection.asPromise();
         console.log('Connected to MongoDB cluster for targeted seeding...');
 
         const generatedEvents = sampleEvents.map(event => {

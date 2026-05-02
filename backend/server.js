@@ -88,6 +88,7 @@ app.get('/', (req, res) => {
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/events', require('./routes/eventRoutes'));
 app.use('/api/admin', require('./routes/adminRoutes'));
+app.use('/api/news', require('./routes/newsRoutes'));
 
 // Global Error Handler (Last stage)
 app.use(errorMiddleware);

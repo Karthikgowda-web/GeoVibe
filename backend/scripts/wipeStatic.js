@@ -9,7 +9,8 @@ const wipeStatic = async () => {
     try {
         const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/geovibe';
         console.log('[WIPE] Connecting to MongoDB...');
-        await mongoose.connect(MONGO_URI);
+        require('../config/db');
+        await mongoose.connection.asPromise();
         
         console.log('[WIPE] Searching for static/example cards (source: "System-Generated")...');
         

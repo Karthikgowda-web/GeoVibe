@@ -6,7 +6,8 @@ require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 const cleanup = async () => {
   try {
     const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/geovibe';
-    await mongoose.connect(MONGO_URI);
+    require('../config/db');
+        await mongoose.connection.asPromise();
     console.log('Connected to DB for cleanup...');
     
     // Delete legacy User-hosted events that don't have a unique imageName (GridFS)
