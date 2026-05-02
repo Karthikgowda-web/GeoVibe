@@ -36,6 +36,10 @@ class Database {
       MONGO_URI += MONGO_URI.includes('?') ? '&retryWrites=true&w=majority' : '?retryWrites=true&w=majority';
     }
 
+    // Mask the URI to safely log what Render is using
+    const maskedUri = MONGO_URI.replace(/:([^:@]+)@/, ':*****@');
+    console.log(`[DB] Attempting connection to: ${maskedUri}`);
+
     try {
       // 4. Optimize Connection Options for long-term stability on MongoDB Atlas
       await mongoose.connect(MONGO_URI, {
