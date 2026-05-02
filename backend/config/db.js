@@ -36,13 +36,11 @@ class Database {
       MONGO_URI += MONGO_URI.includes('?') ? '&retryWrites=true&w=majority' : '?retryWrites=true&w=majority';
     }
 
-    // 3. Robust connection with try-catch block and clear logging
     try {
       // 4. Optimize Connection Options for long-term stability on MongoDB Atlas
       await mongoose.connect(MONGO_URI, {
         maxPoolSize: 10,
-        socketTimeoutMS: 45000,
-        keepAlive: true,
+        socketTimeoutMS: 45000
       });
       console.log('[DB] Singleton: Connection established successfully with Optimized Pooling.');
     } catch (err) {
